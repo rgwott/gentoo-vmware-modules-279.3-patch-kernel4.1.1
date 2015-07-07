@@ -1,0 +1,27 @@
+starting with kernel 3.6, d_revalidate takes an unsigned int "flags"
+as the second argument, not a nameidata pointer! see fs/namei.c 
+for implementation. Also changing vfs_follow_link to nd_set_link.
+See: https://lkml.org/lkml/2013/9/9/236
+
+diff -Naur vmblock-only/linux/inode.c vmblock-only/linux/inode.c
+--- vmblock-only/linux/inode.c	2013-11-05 23:33:26.000000000 -0500
++++ vmblock-only/linux/inode.c	2015-07-07 15:44:15.081664533 -0600
+@@ -135,7 +135,8 @@
+    inode->i_size = INODE_TO_IINFO(inode)->nameLen;
+    inode->i_version = 1;
+    inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
+-   inode->i_uid = inode->i_gid = 0;
++   inode->i_uid = make_kuid(&init_user_ns, 0);
++   inode->i_gid = make_kgid(&init_user_ns, 0);
+    inode->i_op = &LinkInodeOps;
+ 
+    d_add(dentry, inode);
+@@ -177,7 +178,7 @@
+       return -EINVAL;
+    }
+ 
+-   return vfs_readlink(dentry, buffer, buflen, iinfo->name);
++   return readlink_copy(buffer, buflen, iinfo->name);
+ }
+ 
+ 
